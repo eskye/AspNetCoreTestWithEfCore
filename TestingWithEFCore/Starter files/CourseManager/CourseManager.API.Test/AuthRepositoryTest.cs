@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using CourseManager.API.DbContexts;
@@ -6,12 +8,20 @@ using CourseManager.API.Entities;
 using CourseManager.API.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace CourseManager.API.Test
 {
     public class AuthRepositoryTest
     {
+        private readonly ITestOutputHelper _outputHelper;
+
+        public AuthRepositoryTest(ITestOutputHelper outputHelper)
+        {
+            _outputHelper = outputHelper;
+        }
 
         private DbContextOptions<CourseContext> GetContext(Guid dbId) // Enabling Test Isolation
         {
@@ -23,9 +33,22 @@ namespace CourseManager.API.Test
 //                .Options;
             //Using Sqlite
 
+          //  var logs = new List<string>();
+
             var sqlConnetionBuilder = new SqliteConnectionStringBuilder {DataSource = $":memory:"};
             var connection = new SqliteConnection(sqlConnetionBuilder.ToString());
-            var options = new DbContextOptionsBuilder<CourseContext>().UseSqlite(connection).Options;
+            var options = new DbContextOptionsBuilder<CourseContext>()
+                .UseLoggerFactory(new LoggerFactory(
+                    new []
+                    {
+                        new LogToActionLoggerProvider((log) =>
+                        {
+                           // logs.Add(log);
+                           // Debug.WriteLine(log);
+                           _outputHelper.WriteLine(log);
+                        }), 
+                    }))
+                .UseSqlite(connection).Options;
             return options;
         }
         [Fact]
@@ -103,6 +126,7 @@ namespace CourseManager.API.Test
         {
             //Arrange
             var contextOptions = GetContext(Guid.NewGuid()); 
+            
             using (var context = new CourseContext(contextOptions))
             {
                 context.Database.OpenConnection();
