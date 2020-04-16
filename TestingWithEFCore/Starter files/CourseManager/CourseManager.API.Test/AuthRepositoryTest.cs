@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using CourseManager.API.DbContexts;
 using CourseManager.API.Entities;
 using CourseManager.API.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -17,10 +18,14 @@ namespace CourseManager.API.Test
             ///
             ///Test Isolation means write clean and seperate database of each unit test you write
             /// 
-            var options = new DbContextOptionsBuilder<CourseContext>()
-                .UseInMemoryDatabase($"CourseDatabaseTesting-{dbId}")
-                .Options;
+//            var options = new DbContextOptionsBuilder<CourseContext>()
+//                .UseInMemoryDatabase($"CourseDatabaseTesting-{dbId}")
+//                .Options;
+            //Using Sqlite
 
+            var sqlConnetionBuilder = new SqliteConnectionStringBuilder {DataSource = $":memory:"};
+            var connection = new SqliteConnection(sqlConnetionBuilder.ToString());
+            var options = new DbContextOptionsBuilder<CourseContext>().UseSqlite(connection).Options;
             return options;
         }
         [Fact]
@@ -30,6 +35,8 @@ namespace CourseManager.API.Test
             var contextOptions = GetContext(Guid.NewGuid());
             using (var context = new CourseContext(contextOptions))
             {
+              context.Database.OpenConnection();
+              context.Database.EnsureCreated();
                 context.Countries.Add(new Country
                 {
                     Id = "BE",
@@ -76,6 +83,8 @@ namespace CourseManager.API.Test
             var context = GetContext(Guid.NewGuid());
             using (var dbContext = new CourseContext(context))
             {
+                dbContext.Database.OpenConnection();
+                dbContext.Database.EnsureCreated();
                 var authorRepository = new AuthorRepository(dbContext);
 
                 //Assert
@@ -96,6 +105,8 @@ namespace CourseManager.API.Test
             var contextOptions = GetContext(Guid.NewGuid()); 
             using (var context = new CourseContext(contextOptions))
             {
+                context.Database.OpenConnection();
+                context.Database.EnsureCreated();
                 context.Countries.Add(new Country
                 {
                     Id = "BE",
